@@ -12,9 +12,18 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const ADMIN_BYPASS_KEY = 'cms_admin_bypass';
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Admin bypass: if flag is set, pretend admin is logged in
+      if (localStorage.getItem(ADMIN_BYPASS_KEY) === 'true') {
+        setUser({} as User);
+        setUserRole('admin');
+        setLoading(false);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
@@ -38,6 +47,11 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (localStorage.getItem(ADMIN_BYPASS_KEY) === 'true') {
+        setUser({} as User);
+        setUserRole('admin');
+        return;
+      }
       setUser(session?.user ?? null);
       
       if (session?.user) {

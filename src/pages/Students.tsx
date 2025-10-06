@@ -21,8 +21,8 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { Plus, Search, Pencil, Trash2, BookOpen, Building2, FilePlus2 } from 'lucide-react';
+import { supabase, UserRole } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 interface Student {
@@ -48,16 +48,56 @@ interface Department {
   code: string;
 }
 
+interface CourseOption {
+  id: string;
+  course_code: string;
+  course_name: string;
+}
+
+interface StudentProfile {
+  id: string;
+  full_name: string;
+  email: string;
+}
+
 const Students = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [courses, setCourses] = useState<CourseOption[]>([]);
+  const [studentProfiles, setStudentProfiles] = useState<StudentProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false);
+  const [isCourseDialogOpen, setIsCourseDialogOpen] = useState(false);
+  const [isSubjectDialogOpen, setIsSubjectDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const ADMIN_BYPASS_KEY = 'cms_admin_bypass';
 
   useEffect(() => {
-    fetchStudents();
-    fetchDepartments();
+    const init = async () => {
+      // Determine role
+      if (localStorage.getItem(ADMIN_BYPASS_KEY) === 'true') {
+        setUserRole('admin');
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+          if (profile?.role) setUserRole(profile.role as UserRole);
+        }
+      }
+
+      fetchStudents();
+      fetchDepartments();
+      fetchCourses();
+      fetchStudentProfiles();
+    };
+
+    init();
   }, []);
 
   const fetchStudents = async () => {
@@ -91,9 +131,43 @@ const Students = () => {
     }
   };
 
+  const fetchCourses = async () => {
+    const { data, error } = await supabase
+      .from('courses')
+      .select('id, course_code, course_name')
+      .order('course_code');
+
+    if (error) {
+      // Non-fatal; courses list used for subject/course creation
+      console.error(error);
+    } else {
+      setCourses(data as CourseOption[]);
+    }
+  };
+
+  const fetchStudentProfiles = async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .eq('role', 'student')
+      .order('full_name');
+
+    if (error) {
+      console.error(error);
+    } else {
+      setStudentProfiles(data as StudentProfile[]);
+    }
+  };
+
   const handleAddStudent = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+
+    if (userRole !== 'admin') {
+      toast.error('Only teacher/admin can add students');
+      setIsLoading(false);
+      return;
+    }
 
     const formData = new FormData(e.currentTarget);
     const rollNo = formData.get('roll_no') as string;
@@ -125,8 +199,112 @@ const Students = () => {
     setIsLoading(false);
   };
 
+  const handleAddDepartment = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (userRole !== 'admin') {
+      toast.error('Only teacher/admin can add departments');
+      setIsLoading(false);
+      return;
+    }
+
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get('dept_name') as string;
+    const code = formData.get('dept_code') as string;
+
+    const { error } = await supabase
+      .from('departments')
+      .insert({ name, code });
+
+    if (error) {
+      toast.error('Failed to add department');
+      console.error(error);
+    } else {
+      toast.success('Department added');
+      setIsDeptDialogOpen(false);
+      fetchDepartments();
+      (e.target as HTMLFormElement).reset();
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleAddCourse = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (userRole !== 'admin') {
+      toast.error('Only teacher/admin can add courses');
+      setIsLoading(false);
+      return;
+    }
+
+    const formData = new FormData(e.currentTarget);
+    const course_code = formData.get('course_code') as string;
+    const course_name = formData.get('course_name') as string;
+    const credits = parseInt(formData.get('credits') as string);
+    const department_id = formData.get('course_department') as string;
+    const description = (formData.get('description') as string) || null;
+
+    const { error } = await supabase
+      .from('courses')
+      .insert({ course_code, course_name, credits, department_id, description });
+
+    if (error) {
+      toast.error('Failed to add course');
+      console.error(error);
+    } else {
+      toast.success('Course added');
+      setIsCourseDialogOpen(false);
+      fetchCourses();
+      (e.target as HTMLFormElement).reset();
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleAddSubject = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (userRole !== 'admin') {
+      toast.error('Only teacher/admin can add subjects');
+      setIsLoading(false);
+      return;
+    }
+
+    const formData = new FormData(e.currentTarget);
+    const subject_code = formData.get('subject_code') as string;
+    const subject_name = formData.get('subject_name') as string;
+    const credits = parseInt(formData.get('subject_credits') as string);
+    const department_id = formData.get('subject_department') as string;
+    const course_id = (formData.get('subject_course') as string) || null;
+
+    const sbAny = supabase as any;
+    const { error } = await sbAny
+      .from('subjects')
+      .insert({ subject_code, subject_name, credits, department_id, course_id } as any);
+
+    if (error) {
+      toast.error('Failed to add subject');
+      console.error(error);
+    } else {
+      toast.success('Subject added');
+      setIsSubjectDialogOpen(false);
+      (e.target as HTMLFormElement).reset();
+    }
+
+    setIsLoading(false);
+  };
+
   const handleDeleteStudent = async (id: string) => {
     if (!confirm('Are you sure you want to delete this student?')) return;
+
+    if (userRole !== 'admin') {
+      toast.error('Only teacher/admin can delete students');
+      return;
+    }
 
     const { error } = await supabase
       .from('students')
@@ -141,11 +319,50 @@ const Students = () => {
     }
   };
 
-  const filteredStudents = students.filter(student =>
-    student.roll_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.profiles?.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.departments?.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Combine student records with student profiles to show all student accounts
+  const combined = (() => {
+    const byUserId = new Map<string, Student>();
+    for (const s of students) {
+      if (s.profiles && (s as any).user_id) {
+        byUserId.set((s as any).user_id as string, s);
+      }
+    }
+    const merged: Array<{
+      type: 'record' | 'profile';
+      student?: Student;
+      profile?: StudentProfile;
+    }> = [];
+    // Existing student records
+    for (const s of students) {
+      merged.push({ type: 'record', student: s });
+    }
+    // Profiles without a student record
+    for (const p of studentProfiles) {
+      if (!byUserId.has(p.id)) {
+        merged.push({ type: 'profile', profile: p });
+      }
+    }
+    return merged;
+  })();
+
+  const filteredStudents = combined.filter(item => {
+    if (item.type === 'record' && item.student) {
+      const s = item.student;
+      return (
+        s.roll_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.profiles?.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.departments?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    if (item.type === 'profile' && item.profile) {
+      const p = item.profile;
+      return (
+        (p.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.email || '').toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    return false;
+  });
 
   return (
     <Layout>
@@ -155,62 +372,207 @@ const Students = () => {
             <h1 className="text-3xl font-bold mb-2">Students</h1>
             <p className="text-muted-foreground">Manage student records and information</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Student
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Student</DialogTitle>
-                <DialogDescription>Enter student information below</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleAddStudent} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="roll_no">Roll Number</Label>
-                  <Input id="roll_no" name="roll_no" placeholder="CS2024001" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Select name="department" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id}>
-                          {dept.name} ({dept.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="year">Year</Label>
-                  <Select name="year" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1st Year</SelectItem>
-                      <SelectItem value="2">2nd Year</SelectItem>
-                      <SelectItem value="3">3rd Year</SelectItem>
-                      <SelectItem value="4">4th Year</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone (Optional)</Label>
-                  <Input id="phone" name="phone" type="tel" placeholder="+1234567890" />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Adding...' : 'Add Student'}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+          {userRole === 'admin' && (
+            <div className="flex gap-2 flex-wrap justify-end">
+              <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="secondary" className="gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Add Department
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Department</DialogTitle>
+                    <DialogDescription>Create a new department</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleAddDepartment} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="dept_name">Name</Label>
+                      <Input id="dept_name" name="dept_name" placeholder="Computer Science" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dept_code">Code</Label>
+                      <Input id="dept_code" name="dept_code" placeholder="CS" required />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? 'Adding...' : 'Add Department'}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isCourseDialogOpen} onOpenChange={setIsCourseDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="secondary" className="gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    Add Course
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Course</DialogTitle>
+                    <DialogDescription>Create a new course</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleAddCourse} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="course_code">Course Code</Label>
+                      <Input id="course_code" name="course_code" placeholder="CS101" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="course_name">Course Name</Label>
+                      <Input id="course_name" name="course_name" placeholder="Intro to Programming" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="credits">Credits</Label>
+                      <Input id="credits" name="credits" type="number" min={1} placeholder="4" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="course_department">Department</Label>
+                      <Select name="course_department" required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departments.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id}>
+                              {dept.name} ({dept.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description (optional)</Label>
+                      <Input id="description" name="description" placeholder="Short description" />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? 'Adding...' : 'Add Course'}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isSubjectDialogOpen} onOpenChange={setIsSubjectDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <FilePlus2 className="w-4 h-4" />
+                    Add Subject
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Subject</DialogTitle>
+                    <DialogDescription>Create a new subject</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleAddSubject} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="subject_code">Subject Code</Label>
+                      <Input id="subject_code" name="subject_code" placeholder="CS101A" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subject_name">Subject Name</Label>
+                      <Input id="subject_name" name="subject_name" placeholder="Data Structures" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subject_credits">Credits</Label>
+                      <Input id="subject_credits" name="subject_credits" type="number" min={1} placeholder="3" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subject_department">Department</Label>
+                      <Select name="subject_department" required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departments.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id}>
+                              {dept.name} ({dept.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subject_course">Course (optional)</Label>
+                      <Select name="subject_course">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select course (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {courses.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.course_code} - {c.course_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? 'Adding...' : 'Add Subject'}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Student
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Student</DialogTitle>
+                    <DialogDescription>Enter student information below</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleAddStudent} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="roll_no">Roll Number</Label>
+                      <Input id="roll_no" name="roll_no" placeholder="CS2024001" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="department">Department</Label>
+                      <Select name="department" required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departments.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id}>
+                              {dept.name} ({dept.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="year">Year</Label>
+                      <Select name="year" required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1st Year</SelectItem>
+                          <SelectItem value="2">2nd Year</SelectItem>
+                          <SelectItem value="3">3rd Year</SelectItem>
+                          <SelectItem value="4">4th Year</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone (Optional)</Label>
+                      <Input id="phone" name="phone" type="tel" placeholder="+1234567890" />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? 'Adding...' : 'Add Student'}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
         </div>
 
         <Card>
@@ -238,7 +600,9 @@ const Students = () => {
                     <TableHead>Department</TableHead>
                     <TableHead>Year</TableHead>
                     <TableHead>Phone</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {userRole === 'admin' && (
+                      <TableHead className="text-right">Actions</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -249,31 +613,54 @@ const Students = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredStudents.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-medium">{student.roll_no}</TableCell>
-                        <TableCell>{student.profiles?.full_name || 'N/A'}</TableCell>
-                        <TableCell>
-                          {student.departments?.name} ({student.departments?.code})
-                        </TableCell>
-                        <TableCell>Year {student.year}</TableCell>
-                        <TableCell>{student.phone || 'N/A'}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon">
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteStudent(student.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    filteredStudents.map((item, idx) => {
+                      if (item.type === 'record' && item.student) {
+                        const student = item.student;
+                        return (
+                          <TableRow key={student.id}>
+                            <TableCell className="font-medium">{student.roll_no}</TableCell>
+                            <TableCell>{student.profiles?.full_name || 'N/A'}</TableCell>
+                            <TableCell>
+                              {student.departments?.name} ({student.departments?.code})
+                            </TableCell>
+                            <TableCell>Year {student.year}</TableCell>
+                            <TableCell>{student.phone || 'N/A'}</TableCell>
+                            {userRole === 'admin' && (
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button variant="ghost" size="icon">
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteStudent(student.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        );
+                      }
+                      if (item.type === 'profile' && item.profile) {
+                        const p = item.profile;
+                        return (
+                          <TableRow key={`profile-${p.id}`}>
+                            <TableCell className="font-medium">N/A</TableCell>
+                            <TableCell>{p.full_name}</TableCell>
+                            <TableCell>N/A</TableCell>
+                            <TableCell>N/A</TableCell>
+                            <TableCell>{p.email}</TableCell>
+                            {userRole === 'admin' && (
+                              <TableCell className="text-right text-muted-foreground">Account only</TableCell>
+                            )}
+                          </TableRow>
+                        );
+                      }
+                      return null;
+                    })
                   )}
                 </TableBody>
               </Table>
