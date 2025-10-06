@@ -16,6 +16,7 @@ const passwordSchema = z.string().min(6, 'Password must be at least 6 characters
 const Auth = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const ADMIN_BYPASS_KEY = 'cms_admin_bypass';
 
   useEffect(() => {
     const checkUser = async () => {
@@ -36,14 +37,37 @@ const Auth = () => {
     const password = formData.get('signin-password') as string;
 
     try {
+      // Admin bypass: username 'admin' and password 'admin123'
+      if (email === 'admin' && password === 'admin123') {
+        localStorage.setItem(ADMIN_BYPASS_KEY, 'true');
+        toast.success('Logged in as Admin');
+        navigate('/dashboard');
+        return;
+      }
+
       emailSchema.parse(email);
       passwordSchema.parse(password);
 
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
         toast.error(error.message);
       } else {
+        // Enforce student-only login via Supabase accounts
+        if (data.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profile?.role && profile.role !== 'student') {
+            await supabase.auth.signOut();
+            toast.error('Only students can sign in. Use admin/admin123 for admin.');
+            return;
+          }
+        }
+
         toast.success('Welcome back!');
         navigate('/dashboard');
       }
@@ -120,7 +144,7 @@ const Auth = () => {
         <Tabs defaultValue="signin" className="w-full">
           <TabsList className="grid w-full grid-cols-2 p-1 bg-muted/50 backdrop-blur">
             <TabsTrigger value="signin" className="data-[state=active]:shadow-lg">Sign In</TabsTrigger>
-            <TabsTrigger value="signup" className="data-[state=active]:shadow-lg">Sign Up</TabsTrigger>
+            <TabsTrigger value="signup" className="data-[state=active]:shadow-lg">Student Sign Up</TabsTrigger>
           </TabsList>
 
           <TabsContent value="signin">
@@ -132,12 +156,12 @@ const Auth = () => {
               <CardContent>
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email">Email or Admin ID</Label>
                     <Input
                       id="signin-email"
                       name="signin-email"
-                      type="email"
-                      placeholder="student@college.edu"
+                      type="text"
+                      placeholder="student@college.edu or admin"
                       required
                     />
                   </div>
