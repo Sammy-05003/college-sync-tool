@@ -13,7 +13,7 @@ A modern, beautiful, and fully functional College Management System built with R
 - Role-specific guidance and help
 
 ### 🎨 Beautiful UI
-- Modern gradient design system with purple & cyan accents
+- Modern gradient design system 
 - Smooth animations and transitions
 - Responsive design (mobile, tablet, desktop)
 - Dark mode support
@@ -214,17 +214,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
 2. Deploy `dist/` folder to any static host (Vercel, Netlify, etc.)
 3. Configure environment variables on hosting platform
 
-## 📞 Support & Resources
 
-**Need help?**
-- Review components in `src/components/` and pages in `src/pages/`
-- Supabase docs: https://supabase.com/docs
-
-## 🎓 Learning Resources
-
-**Video Tutorials:**
-- [Building a Full Stack App with Lovable](https://www.youtube.com/watch?v=9KHLTZaJcR8)
-- Complete YouTube playlist available on Lovable channel
 
 **Code Examples:**
 - Check `src/components/` for component patterns
@@ -279,3 +269,74 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
   - `course_id` UUID NULL REFERENCES `courses(id)`
   - timestamps (`created_at`, `updated_at`)
 - RLS/policies: allow SELECT to authenticated users; allow INSERT/UPDATE/DELETE to admin only
+
+## System Design
+
+### High-level Architecture
+
+```mermaid
+graph TD
+  subgraph Client [Client]
+    A[React + Vite (SPA)]
+    B[Role-based UI]
+  end
+
+  subgraph Supabase [Supabase]
+    AU[Auth]
+    DB[(Postgres DB)]
+    RLS[Row Level Security]
+  end
+
+  subgraph DB_Tables [DB Tables]
+    P[profiles]
+    S[students]
+    D[departments]
+    C[courses]
+    SJ[subjects]
+  end
+
+  A -->|Email/Password| AU
+  A -->|Admin bypass (localStorage)| B
+  AU -->|JWT Session| A
+  A -->|CRUD via Supabase JS| DB
+  DB --> RLS
+  DB --- P
+  DB --- S
+  DB --- D
+  DB --- C
+  DB --- SJ
+```
+
+Key points:
+- Teacher (admin) uses local admin bypass; students authenticate via Supabase Auth.
+- All data persists in Postgres tables with RLS enforcing student read-only vs admin write access.
+
+### Flow: Student Signup → Admin Visibility
+
+```mermaid
+sequenceDiagram
+  participant U as Student (Client)
+  participant AUTH as Supabase Auth
+  participant DB as Postgres (profiles)
+  participant ADM as Admin (Client)
+
+  U->>AUTH: Sign Up (email, password, full_name)
+  AUTH->>DB: Trigger handle_new_user → insert profiles(role=student)
+  U->>U: Redirect to dashboard (student role)
+  ADM->>DB: Fetch profiles(role=student), students
+  DB-->>ADM: Profiles without matching students → show as "Account only"
+  ADM->>DB: Insert students(row with department/year)
+  DB-->>ADM: Students list reflects new record
+```
+
+### Flow: Admin (Teacher) Adds Entities
+
+```mermaid
+sequenceDiagram
+  participant A as Admin (Client)
+  participant DB as Postgres (RLS)
+
+  A->>DB: Insert departments/courses/subjects/students
+  DB-->>A: Allowed (RLS: admin-only writes)
+  A->>A: UI updates list views
+```
