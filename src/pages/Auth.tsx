@@ -103,27 +103,31 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-30" style={{ background: "var(--gradient-hero)" }} />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,hsl(var(--primary)/0.1),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,hsl(var(--accent)/0.1),transparent_50%)]" />
+      
+      <div className="w-full max-w-md relative z-10">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center mb-4">
-            <GraduationCap className="w-8 h-8 text-primary-foreground" />
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-lg hover:shadow-2xl transition-all hover:scale-110" style={{ background: "var(--gradient-primary)" }}>
+            <GraduationCap className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-center mb-2">College Management System</h1>
-          <p className="text-muted-foreground text-center">Manage students, teachers, and courses</p>
+          <h1 className="text-4xl font-bold text-center mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">College Management System</h1>
+          <p className="text-muted-foreground text-center text-lg">Modern education management platform</p>
         </div>
 
         <Tabs defaultValue="signin" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 p-1 bg-muted/50 backdrop-blur">
+            <TabsTrigger value="signin" className="data-[state=active]:shadow-lg">Sign In</TabsTrigger>
+            <TabsTrigger value="signup" className="data-[state=active]:shadow-lg">Sign Up</TabsTrigger>
           </TabsList>
 
           <TabsContent value="signin">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sign In</CardTitle>
-                <CardDescription>Enter your credentials to access your account</CardDescription>
+            <Card className="border-2 shadow-2xl backdrop-blur-sm bg-card/95">
+              <CardHeader className="space-y-3">
+                <CardTitle className="text-2xl">Welcome Back</CardTitle>
+                <CardDescription>Enter your credentials to access your dashboard</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSignIn} className="space-y-4">
@@ -146,7 +150,12 @@ const Auth = () => {
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full shadow-lg hover:shadow-xl transition-all hover:scale-105" 
+                    style={{ background: "var(--gradient-primary)" }}
+                    disabled={isLoading}
+                  >
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
                 </form>
@@ -155,10 +164,10 @@ const Auth = () => {
           </TabsContent>
 
           <TabsContent value="signup">
-            <Card>
-              <CardHeader>
-                <CardTitle>Create Account</CardTitle>
-                <CardDescription>Sign up to get started with the system</CardDescription>
+            <Card className="border-2 shadow-2xl backdrop-blur-sm bg-card/95">
+              <CardHeader className="space-y-3">
+                <CardTitle className="text-2xl">Get Started</CardTitle>
+                <CardDescription>Create your account in seconds</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSignUp} className="space-y-4">
@@ -192,7 +201,12 @@ const Auth = () => {
                       required
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button 
+                    type="submit" 
+                    className="w-full shadow-lg hover:shadow-xl transition-all hover:scale-105" 
+                    style={{ background: "var(--gradient-primary)" }}
+                    disabled={isLoading}
+                  >
                     {isLoading ? 'Creating account...' : 'Create Account'}
                   </Button>
                 </form>

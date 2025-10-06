@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { supabase, UserRole } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { Chatbot } from '@/components/Chatbot';
 
 interface LayoutProps {
   children: ReactNode;
@@ -139,6 +140,8 @@ const Layout = ({ children }: LayoutProps) => {
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+      
+      <Chatbot />
     </div>
   );
 };

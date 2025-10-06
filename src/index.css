@@ -8,7 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 220 25% 98%;
     --foreground: 220 13% 13%;
 
     --card: 0 0% 100%;
@@ -17,8 +17,9 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 220 13% 13%;
 
-    --primary: 220 70% 50%;
+    --primary: 264 70% 58%;
     --primary-foreground: 0 0% 100%;
+    --primary-glow: 264 80% 68%;
 
     --secondary: 220 14% 96%;
     --secondary-foreground: 220 13% 13%;
@@ -34,23 +35,25 @@ All colors MUST be HSL.
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 220 70% 50%;
+    --ring: 264 70% 58%;
 
     --radius: 0.75rem;
 
     --sidebar-background: 220 19% 18%;
     --sidebar-foreground: 220 9% 85%;
-    --sidebar-primary: 220 70% 50%;
+    --sidebar-primary: 264 70% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 19% 22%;
     --sidebar-accent-foreground: 220 9% 85%;
     --sidebar-border: 220 19% 25%;
-    --sidebar-ring: 220 70% 50%;
+    --sidebar-ring: 264 70% 58%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(220 70% 50%), hsl(250 70% 55%));
+    --gradient-primary: linear-gradient(135deg, hsl(264 70% 58%), hsl(280 70% 65%));
     --gradient-accent: linear-gradient(135deg, hsl(186 77% 48%), hsl(200 80% 50%));
-    --shadow-soft: 0 4px 6px -1px hsl(220 70% 50% / 0.1), 0 2px 4px -1px hsl(220 70% 50% / 0.06);
-    --shadow-medium: 0 10px 15px -3px hsl(220 70% 50% / 0.1), 0 4px 6px -2px hsl(220 70% 50% / 0.05);
+    --gradient-hero: linear-gradient(135deg, hsl(264 70% 58% / 0.1), hsl(186 77% 48% / 0.1));
+    --shadow-soft: 0 4px 6px -1px hsl(264 70% 58% / 0.1), 0 2px 4px -1px hsl(264 70% 58% / 0.06);
+    --shadow-medium: 0 10px 15px -3px hsl(264 70% 58% / 0.15), 0 4px 6px -2px hsl(264 70% 58% / 0.1);
+    --shadow-glow: 0 0 40px hsl(264 70% 68% / 0.3);
   }
 
   .dark {
@@ -63,8 +66,9 @@ All colors MUST be HSL.
     --popover: 220 19% 14%;
     --popover-foreground: 220 9% 95%;
 
-    --primary: 220 70% 55%;
+    --primary: 264 70% 65%;
     --primary-foreground: 0 0% 100%;
+    --primary-glow: 264 80% 75%;
 
     --secondary: 220 19% 18%;
     --secondary-foreground: 220 9% 95%;
@@ -80,21 +84,23 @@ All colors MUST be HSL.
 
     --border: 220 19% 25%;
     --input: 220 19% 25%;
-    --ring: 220 70% 55%;
+    --ring: 264 70% 65%;
 
     --sidebar-background: 220 19% 14%;
     --sidebar-foreground: 220 9% 85%;
-    --sidebar-primary: 220 70% 55%;
+    --sidebar-primary: 264 70% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 19% 18%;
     --sidebar-accent-foreground: 220 9% 85%;
     --sidebar-border: 220 19% 22%;
-    --sidebar-ring: 220 70% 55%;
+    --sidebar-ring: 264 70% 65%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(220 70% 55%), hsl(250 70% 60%));
+    --gradient-primary: linear-gradient(135deg, hsl(264 70% 65%), hsl(280 70% 70%));
     --gradient-accent: linear-gradient(135deg, hsl(186 77% 48%), hsl(200 80% 50%));
-    --shadow-soft: 0 4px 6px -1px hsl(220 70% 55% / 0.2), 0 2px 4px -1px hsl(220 70% 55% / 0.1);
-    --shadow-medium: 0 10px 15px -3px hsl(220 70% 55% / 0.2), 0 4px 6px -2px hsl(220 70% 55% / 0.1);
+    --gradient-hero: linear-gradient(135deg, hsl(264 70% 65% / 0.15), hsl(186 77% 48% / 0.15));
+    --shadow-soft: 0 4px 6px -1px hsl(264 70% 65% / 0.2), 0 2px 4px -1px hsl(264 70% 65% / 0.1);
+    --shadow-medium: 0 10px 15px -3px hsl(264 70% 65% / 0.2), 0 4px 6px -2px hsl(264 70% 65% / 0.1);
+    --shadow-glow: 0 0 40px hsl(264 70% 75% / 0.4);
   }
 }
 
@@ -105,5 +111,37 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scale-in 0.3s ease-out forwards;
   }
 }

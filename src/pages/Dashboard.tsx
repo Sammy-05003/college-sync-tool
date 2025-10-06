@@ -72,23 +72,28 @@ const Dashboard = () => {
   return (
     <Layout>
       <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back! Here's an overview of the system.
-          </p>
+        <div className="relative overflow-hidden rounded-2xl p-8 mb-8" style={{ background: "var(--gradient-hero)" }}>
+          <div className="relative z-10">
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              {userRole === 'admin' ? 'Admin Dashboard' : userRole === 'teacher' ? 'Teacher Dashboard' : 'Student Dashboard'}
+            </h1>
+            <p className="text-muted-foreground text-lg">Welcome back! Here's your overview.</p>
+          </div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {statCards.map((stat) => (
-            <Card key={stat.title} className="hover:shadow-lg transition-shadow">
+          {statCards.map((stat, index) => (
+            <Card key={stat.title} className="border-2 hover:shadow-2xl transition-all hover:-translate-y-2 animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ background: index === 0 ? "var(--gradient-primary)" : index === 1 ? "var(--gradient-accent)" : "linear-gradient(135deg, hsl(280 70% 65%), hsl(300 70% 70%))" }}>
+                  <stat.icon className="h-6 w-6 text-white" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+                <div className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{stat.value}</div>
+                <p className="text-xs text-muted-foreground mt-2">{stat.description}</p>
               </CardContent>
             </Card>
           ))}
