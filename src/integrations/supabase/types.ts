@@ -53,6 +53,54 @@ export type Database = {
             referencedRelation: "departments"
             referencedColumns: ["id"]
           },
+      subjects: {
+        Row: {
+          id: string
+          subject_code: string
+          subject_name: string
+          credits: number
+          department_id: string | null
+          course_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          subject_code: string
+          subject_name: string
+          credits: number
+          department_id?: string | null
+          course_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          subject_code?: string
+          subject_name?: string
+          credits?: number
+          department_id?: string | null
+          course_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subjects_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subjects_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
         ]
       }
       departments: {

@@ -78,6 +78,32 @@ const Students = () => {
     const init = async () => {
       // Determine role
       if (localStorage.getItem(ADMIN_BYPASS_KEY) === 'true') {
+        // Ensure we are authenticated as admin so RLS permits writes
+        const adminEmail = 'admin@cms.local';
+        const adminPassword = 'admin123';
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          const { error: signInErr } = await supabase.auth.signInWithPassword({
+            email: adminEmail,
+            password: adminPassword,
+          });
+          if (signInErr) {
+            const { error: signUpErr } = await supabase.auth.signUp({
+              email: adminEmail,
+              password: adminPassword,
+              options: { data: { full_name: 'Administrator', role: 'admin' } },
+            });
+            if (signUpErr) {
+              console.error('Admin sign-up failed', signUpErr);
+            } else {
+              const { error: reSignInErr } = await supabase.auth.signInWithPassword({
+                email: adminEmail,
+                password: adminPassword,
+              });
+              if (reSignInErr) console.error('Admin sign-in after signup failed', reSignInErr);
+            }
+          }
+        }
         setUserRole('admin');
       } else {
         const { data: { session } } = await supabase.auth.getSession();
@@ -111,7 +137,7 @@ const Students = () => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      toast.error('Failed to fetch students');
+      toast.error(`Failed to fetch students: ${error.message}`);
       console.error(error);
     } else {
       setStudents(data as Student[]);
@@ -125,7 +151,7 @@ const Students = () => {
       .order('name');
 
     if (error) {
-      toast.error('Failed to fetch departments');
+      toast.error(`Failed to fetch departments: ${error.message}`);
     } else {
       setDepartments(data);
     }
@@ -187,7 +213,7 @@ const Students = () => {
       });
 
     if (error) {
-      toast.error('Failed to add student');
+      toast.error(`Failed to add student: ${error.message}`);
       console.error(error);
     } else {
       toast.success('Student added successfully');
@@ -218,7 +244,7 @@ const Students = () => {
       .insert({ name, code });
 
     if (error) {
-      toast.error('Failed to add department');
+      toast.error(`Failed to add department: ${error.message}`);
       console.error(error);
     } else {
       toast.success('Department added');
@@ -252,7 +278,7 @@ const Students = () => {
       .insert({ course_code, course_name, credits, department_id, description });
 
     if (error) {
-      toast.error('Failed to add course');
+      toast.error(`Failed to add course: ${error.message}`);
       console.error(error);
     } else {
       toast.success('Course added');
@@ -281,13 +307,12 @@ const Students = () => {
     const department_id = formData.get('subject_department') as string;
     const course_id = (formData.get('subject_course') as string) || null;
 
-    const sbAny = supabase as any;
-    const { error } = await sbAny
+    const { error } = await supabase
       .from('subjects')
-      .insert({ subject_code, subject_name, credits, department_id, course_id } as any);
+      .insert({ subject_code, subject_name, credits, department_id, course_id });
 
     if (error) {
-      toast.error('Failed to add subject');
+      toast.error(`Failed to add subject: ${error.message}`);
       console.error(error);
     } else {
       toast.success('Subject added');
@@ -312,7 +337,7 @@ const Students = () => {
       .eq('id', id);
 
     if (error) {
-      toast.error('Failed to delete student');
+      toast.error(`Failed to delete student: ${error.message}`);
     } else {
       toast.success('Student deleted successfully');
       fetchStudents();

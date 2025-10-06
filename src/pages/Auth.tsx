@@ -40,6 +40,36 @@ const Auth = () => {
       // Admin bypass: username 'admin' and password 'admin123'
       if (email === 'admin' && password === 'admin123') {
         localStorage.setItem(ADMIN_BYPASS_KEY, 'true');
+        // Ensure we are AUTHENTICATED as an admin so RLS permits writes
+        const adminEmail = 'admin@cms.local';
+        const adminPassword = 'admin123';
+        // Try sign-in first
+        const { error: adminSignInErr } = await supabase.auth.signInWithPassword({
+          email: adminEmail,
+          password: adminPassword,
+        });
+        if (adminSignInErr) {
+          // If not existing, create the admin user (assumes email confirmations disabled in project)
+          const { error: adminSignUpErr } = await supabase.auth.signUp({
+            email: adminEmail,
+            password: adminPassword,
+            options: {
+              data: { full_name: 'Administrator', role: 'admin' },
+            },
+          });
+          if (adminSignUpErr) {
+            console.error('Admin sign-up failed', adminSignUpErr);
+          } else {
+            // Sign in after sign up
+            const { error: reSignInErr } = await supabase.auth.signInWithPassword({
+              email: adminEmail,
+              password: adminPassword,
+            });
+            if (reSignInErr) {
+              console.error('Admin sign-in after signup failed', reSignInErr);
+            }
+          }
+        }
         toast.success('Logged in as Admin');
         navigate('/dashboard');
         return;

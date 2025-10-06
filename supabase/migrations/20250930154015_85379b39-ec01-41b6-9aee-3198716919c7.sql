@@ -193,6 +193,42 @@ CREATE TRIGGER set_updated_at_courses
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_updated_at();
 
+-- Create subjects table
+CREATE TABLE IF NOT EXISTS public.subjects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject_code TEXT NOT NULL UNIQUE,
+  subject_name TEXT NOT NULL,
+  credits INTEGER NOT NULL CHECK (credits > 0),
+  department_id UUID REFERENCES public.departments(id),
+  course_id UUID NULL REFERENCES public.courses(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
+
+-- Subjects policies
+CREATE POLICY IF NOT EXISTS "Anyone can view subjects"
+  ON public.subjects FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY IF NOT EXISTS "Only admins can manage subjects"
+  ON public.subjects FOR ALL
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
+
+-- Trigger for updated_at on subjects
+CREATE TRIGGER IF NOT EXISTS set_updated_at_subjects
+  BEFORE UPDATE ON public.subjects
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_updated_at();
+
 -- Insert some sample departments
 INSERT INTO public.departments (name, code) VALUES
   ('Computer Science', 'CS'),
