@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, BookOpen, GraduationCap, TrendingUp } from 'lucide-react';
+import { Users, BookOpen, GraduationCap } from 'lucide-react';
 import { supabase, UserRole } from '@/lib/supabase';
+import { getUserRole } from '@/lib/roleHelper';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -17,15 +18,8 @@ const Dashboard = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profile) {
-          setUserRole(profile.role as UserRole);
-        }
+        const role = await getUserRole(session.user.id);
+        setUserRole(role);
 
         // Fetch statistics
         const [studentsRes, coursesRes, departmentsRes] = await Promise.all([

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getUserRole } from "@/lib/roleHelper";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -16,22 +17,13 @@ export function Chatbot() {
   const [userRole, setUserRole] = useState<string>("guest");
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const ADMIN_BYPASS_KEY = 'cms_admin_bypass';
 
   useEffect(() => {
     const fetchUserRole = async () => {
-      if (localStorage.getItem(ADMIN_BYPASS_KEY) === 'true') {
-        setUserRole('admin');
-        return;
-      }
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        if (data) setUserRole(data.role);
+        const role = await getUserRole(user.id);
+        if (role) setUserRole(role);
       }
     };
     fetchUserRole();

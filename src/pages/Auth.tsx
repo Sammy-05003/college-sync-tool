@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { GraduationCap } from 'lucide-react';
 import { z } from 'zod';
+import { getUserRole } from '@/lib/roleHelper';
 
 const emailSchema = z.string().email('Invalid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -16,7 +17,6 @@ const passwordSchema = z.string().min(6, 'Password must be at least 6 characters
 const Auth = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const ADMIN_BYPASS_KEY = 'cms_admin_bypass';
 
   useEffect(() => {
     const checkUser = async () => {
@@ -37,44 +37,6 @@ const Auth = () => {
     const password = formData.get('signin-password') as string;
 
     try {
-      // Admin bypass: username 'admin' and password 'admin123'
-      if (email === 'admin' && password === 'admin123') {
-        localStorage.setItem(ADMIN_BYPASS_KEY, 'true');
-        // Ensure we are AUTHENTICATED as an admin so RLS permits writes
-        const adminEmail = 'admin@cms.local';
-        const adminPassword = 'admin123';
-        // Try sign-in first
-        const { error: adminSignInErr } = await supabase.auth.signInWithPassword({
-          email: adminEmail,
-          password: adminPassword,
-        });
-        if (adminSignInErr) {
-          // If not existing, create the admin user (assumes email confirmations disabled in project)
-          const { error: adminSignUpErr } = await supabase.auth.signUp({
-            email: adminEmail,
-            password: adminPassword,
-            options: {
-              data: { full_name: 'Administrator', role: 'admin' },
-            },
-          });
-          if (adminSignUpErr) {
-            console.error('Admin sign-up failed', adminSignUpErr);
-          } else {
-            // Sign in after sign up
-            const { error: reSignInErr } = await supabase.auth.signInWithPassword({
-              email: adminEmail,
-              password: adminPassword,
-            });
-            if (reSignInErr) {
-              console.error('Admin sign-in after signup failed', reSignInErr);
-            }
-          }
-        }
-        toast.success('Logged in as Admin');
-        navigate('/dashboard');
-        return;
-      }
-
       emailSchema.parse(email);
       passwordSchema.parse(password);
 
@@ -82,23 +44,9 @@ const Auth = () => {
 
       if (error) {
         toast.error(error.message);
-      } else {
-        // Enforce student-only login via Supabase accounts
-        if (data.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', data.user.id)
-            .single();
-
-          if (profile?.role && profile.role !== 'student') {
-            await supabase.auth.signOut();
-            toast.error('Only students can sign in. Use admin/admin123 for admin.');
-            return;
-          }
-        }
-
-        toast.success('Welcome back!');
+      } else if (data.user) {
+        const role = await getUserRole(data.user.id);
+        toast.success(`Welcome back${role ? ` ${role}` : ''}!`);
         navigate('/dashboard');
       }
     } catch (error) {

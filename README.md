@@ -1,32 +1,41 @@
-# 🎓 College Management System
+# 🎓 College Management System (CMS)
 
-A modern, beautiful, and fully functional College Management System built with React and TypeScript.
+A modern, full-stack college management system with attendance tracking, student notes, and AI assistant.
 
 ## ✨ Features
 
-### 🔐 Role-Based Authentication
-- **Admin Dashboard**: Manage students, add marks, subjects, update results, see all activity
-- **Student Dashboard**: View grades, attendance, enrolled courses; cannot modify data
+### For Students
+- **Attendance Tracking**: View your attendance records by subject and date
+- **Personal Notes**: Create and manage study notes in your private diary
+- **Course Access**: View enrolled courses and subjects
+- **AI Assistant**: Get instant help with academics
 
-### 🤖 Assistant (optional)
-- Context-aware chatbot example
-- Role-specific guidance and help
-
-### 🎨 Beautiful UI
-- Modern gradient design system with purple & cyan accents
-- Smooth animations and transitions
-- Responsive design (mobile, tablet, desktop)
-- Dark mode support
-- Glassmorphism effects and hover animations
-
-### 📊 Core Functionality
-- **Student Management**: Full CRUD operations
-- **Course Management**: Browse, search, and filter courses
-- **Department Management**: Organize by departments
-- **Real-time Updates**: Instant data synchronization
-- **Secure Authentication**: Admin bypass plus Supabase auth for students
+### For Teachers & Admins
+- **Attendance Management**: Mark student attendance as present, absent, or late
+- **Student Management**: View and manage student records
+- **Full Admin Access**: Teachers have complete administrative capabilities
+- **Course Management**: Manage courses, subjects, and departments
 
 ## 🚀 Quick Start
+
+**Admin/Teacher Login**: Use your assigned credentials
+**Student Signup**: Click "Student Sign Up" and create an account with email and password (min 6 characters)
+
+## 🎨 Key Features
+
+- 📊 **Attendance System**: Teachers mark, students view
+- 📝 **Notes/Diary**: Private study notes for students  
+- 🤖 **AI Chatbot**: Powered by Google Gemini
+- 🔐 **Role-Based Security**: Protected routes and data
+- 🌙 **Dark Mode**: Beautiful gradient design with dark mode support
+
+## 🛠️ Tech Stack
+
+React 18 • TypeScript • Tailwind CSS • Supabase • Google Gemini AI
+
+---
+
+Built with ❤️ using Lovable
 
 ### Prerequisites
 - Node.js 18+ installed

@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Search, Pencil, Trash2, BookOpen, Building2, FilePlus2 } from 'lucide-react';
 import { supabase, UserRole } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { getUserRole } from '@/lib/roleHelper';
 
 interface Student {
   id: string;
@@ -72,49 +73,13 @@ const Students = () => {
   const [isSubjectDialogOpen, setIsSubjectDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const ADMIN_BYPASS_KEY = 'cms_admin_bypass';
 
   useEffect(() => {
     const init = async () => {
-      // Determine role
-      if (localStorage.getItem(ADMIN_BYPASS_KEY) === 'true') {
-        // Ensure we are authenticated as admin so RLS permits writes
-        const adminEmail = 'admin@cms.local';
-        const adminPassword = 'admin123';
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          const { error: signInErr } = await supabase.auth.signInWithPassword({
-            email: adminEmail,
-            password: adminPassword,
-          });
-          if (signInErr) {
-            const { error: signUpErr } = await supabase.auth.signUp({
-              email: adminEmail,
-              password: adminPassword,
-              options: { data: { full_name: 'Administrator', role: 'admin' } },
-            });
-            if (signUpErr) {
-              console.error('Admin sign-up failed', signUpErr);
-            } else {
-              const { error: reSignInErr } = await supabase.auth.signInWithPassword({
-                email: adminEmail,
-                password: adminPassword,
-              });
-              if (reSignInErr) console.error('Admin sign-in after signup failed', reSignInErr);
-            }
-          }
-        }
-        setUserRole('admin');
-      } else {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-          if (profile?.role) setUserRole(profile.role as UserRole);
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const role = await getUserRole(session.user.id);
+        setUserRole(role);
       }
 
       fetchStudents();
