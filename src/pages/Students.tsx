@@ -23,6 +23,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, Pencil, Trash2, BookOpen, Building2, FilePlus2 } from 'lucide-react';
 import { supabase, UserRole } from '@/lib/supabase';
+import supabaseAdmin from '@/lib/supabaseAdmin';
+import { isLocalAdmin } from '@/lib/roleHelper';
 import { toast } from 'sonner';
 import { getUserRole } from '@/lib/roleHelper';
 
@@ -73,11 +75,17 @@ const Students = () => {
   const [isSubjectDialogOpen, setIsSubjectDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const localAdminActive = typeof window !== 'undefined' && localStorage.getItem('local_admin') === 'true';
+  const adminClientAvailable = !!supabaseAdmin;
 
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      // Respect local admin bypass
+      const localAdmin = (await import('@/lib/roleHelper')).isLocalAdmin();
+      if (localAdmin) {
+        setUserRole('admin');
+      } else if (session?.user) {
         const role = await getUserRole(session.user.id);
         setUserRole(role);
       }
@@ -92,7 +100,8 @@ const Students = () => {
   }, []);
 
   const fetchStudents = async () => {
-    const { data, error } = await supabase
+    const client = (isLocalAdmin() && supabaseAdmin) ? supabaseAdmin : supabase;
+    const { data, error } = await client
       .from('students')
       .select(`
         *,
@@ -110,7 +119,8 @@ const Students = () => {
   };
 
   const fetchDepartments = async () => {
-    const { data, error } = await supabase
+    const client = (isLocalAdmin() && supabaseAdmin) ? supabaseAdmin : supabase;
+    const { data, error } = await client
       .from('departments')
       .select('*')
       .order('name');
@@ -123,7 +133,8 @@ const Students = () => {
   };
 
   const fetchCourses = async () => {
-    const { data, error } = await supabase
+    const client = (isLocalAdmin() && supabaseAdmin) ? supabaseAdmin : supabase;
+    const { data, error } = await client
       .from('courses')
       .select('id, course_code, course_name')
       .order('course_code');
@@ -137,7 +148,8 @@ const Students = () => {
   };
 
   const fetchStudentProfiles = async () => {
-    const { data, error } = await supabase
+    const client = (isLocalAdmin() && supabaseAdmin) ? supabaseAdmin : supabase;
+    const { data, error } = await client
       .from('profiles')
       .select('id, full_name, email')
       .eq('role', 'student')
@@ -168,7 +180,9 @@ const Students = () => {
 
     // For now, we'll create a student record without a user_id
     // In a full implementation, you'd create a user account first
-    const { error } = await supabase
+    // If running local admin bypass and admin client available, use admin client
+    const client = (isLocalAdmin() && supabaseAdmin) ? supabaseAdmin : supabase;
+    const { error } = await client
       .from('students')
       .insert({
         roll_no: rollNo,
@@ -204,7 +218,8 @@ const Students = () => {
     const name = formData.get('dept_name') as string;
     const code = formData.get('dept_code') as string;
 
-    const { error } = await supabase
+    const client = (isLocalAdmin() && supabaseAdmin) ? supabaseAdmin : supabase;
+    const { error } = await client
       .from('departments')
       .insert({ name, code });
 
@@ -238,7 +253,8 @@ const Students = () => {
     const department_id = formData.get('course_department') as string;
     const description = (formData.get('description') as string) || null;
 
-    const { error } = await supabase
+    const client = (isLocalAdmin() && supabaseAdmin) ? supabaseAdmin : supabase;
+    const { error } = await client
       .from('courses')
       .insert({ course_code, course_name, credits, department_id, description });
 
@@ -272,7 +288,8 @@ const Students = () => {
     const department_id = formData.get('subject_department') as string;
     const course_id = (formData.get('subject_course') as string) || null;
 
-    const { error } = await supabase
+    const client = (isLocalAdmin() && supabaseAdmin) ? supabaseAdmin : supabase;
+    const { error } = await client
       .from('subjects')
       .insert({ subject_code, subject_name, credits, department_id, course_id });
 
@@ -296,7 +313,8 @@ const Students = () => {
       return;
     }
 
-    const { error } = await supabase
+    const client = (isLocalAdmin() && supabaseAdmin) ? supabaseAdmin : supabase;
+    const { error } = await client
       .from('students')
       .delete()
       .eq('id', id);
@@ -364,6 +382,14 @@ const Students = () => {
           </div>
           {userRole === 'admin' && (
             <div className="flex gap-2 flex-wrap justify-end">
+              {/* Show dev-only banner if local admin is active but service key is missing */}
+              {localAdminActive && !adminClientAvailable && (
+                <div className="p-2 rounded-md bg-yellow-100 text-yellow-800 mr-2">
+                  Local admin mode active, but Supabase service key is missing.
+                  Admin writes will be attempted with the regular client and may be blocked by RLS.
+                  To enable full admin operations in dev, set VITE_SUPABASE_SERVICE_KEY in your .env file.
+                </div>
+              )}
               <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="secondary" className="gap-2">

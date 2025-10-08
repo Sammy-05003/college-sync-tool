@@ -37,6 +37,16 @@ const Auth = () => {
     const password = formData.get('signin-password') as string;
 
     try {
+      // Admin bypass: allow a local admin login without Supabase
+      if (email === 'admin' && password === 'admin123') {
+        // store a local admin marker
+        localStorage.setItem('local_admin', 'true');
+        toast.success('Welcome back admin!');
+        navigate('/dashboard');
+        setIsLoading(false);
+        return;
+      }
+
       emailSchema.parse(email);
       passwordSchema.parse(password);
 

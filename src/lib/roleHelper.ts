@@ -31,3 +31,10 @@ export async function checkUserRole(userId: string, role: UserRole): Promise<boo
   
   return !!data;
 }
+export function isLocalAdmin(): boolean {
+  try {
+    return typeof window !== 'undefined' && localStorage.getItem('local_admin') === 'true';
+  } catch (e) {
+    return false;
+  }
+}

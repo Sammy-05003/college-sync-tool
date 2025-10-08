@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase, UserRole } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { getUserRole } from '@/lib/roleHelper';
+import { getUserRole, isLocalAdmin } from '@/lib/roleHelper';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,20 +16,37 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
 
   useEffect(() => {
     const checkAuth = async () => {
+      // First, check for local admin bypass
+      const isLocalAdmin = typeof window !== 'undefined' && localStorage.getItem('local_admin') === 'true';
+      if (isLocalAdmin) {
+        setUser({} as any); // mark as authenticated (not a Supabase user)
+        setUserRole('admin');
+        setLoading(false);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (session?.user) {
         setUser(session.user);
         const role = await getUserRole(session.user.id);
         setUserRole(role);
       }
-      
+
       setLoading(false);
     };
 
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // If local admin bypass is active, don't let Supabase subscription overwrite it
+      if (typeof window !== 'undefined' && isLocalAdmin()) {
+        // ensure we remain as admin
+        setUser({} as any);
+        setUserRole('admin');
+        return;
+      }
+
       setUser(session?.user ?? null);
       
       if (session?.user) {

@@ -31,6 +31,14 @@ const Layout = ({ children }: LayoutProps) => {
   useEffect(() => {
     const fetchUserProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      // Support local admin bypass
+      const isLocalAdmin = typeof window !== 'undefined' && localStorage.getItem('local_admin') === 'true';
+      if (isLocalAdmin) {
+        setUserRole('admin');
+        setUserName('Administrator');
+        return;
+      }
+
       if (session?.user) {
         const [role, { data: profile }] = await Promise.all([
           getUserRole(session.user.id),
@@ -50,6 +58,14 @@ const Layout = ({ children }: LayoutProps) => {
   }, []);
 
   const handleLogout = async () => {
+    // Clear local admin bypass if present
+    if (typeof window !== 'undefined' && localStorage.getItem('local_admin') === 'true') {
+      localStorage.removeItem('local_admin');
+      toast.success('Signed out successfully');
+      navigate('/auth');
+      return;
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast.error('Error signing out');
